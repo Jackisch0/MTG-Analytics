@@ -1,0 +1,32 @@
+{
+    "name": "mtg-meta-analytics",
+    "version": "1.0.0",
+    "description": "MTG Tournament scraping and decklist analysis",
+    "main": "index.js",
+    "scripts": {
+        "scrape:goldfish": "ts-node scripts/scrape_goldfish.ts",
+        "scrape:melee": "ts-node scripts/scrape_melee.ts",
+        "enrich": "ts-node scripts/enrich_cards.ts",
+        "dev": "next dev",
+        "build": "next build",
+        "start": "next start"
+    },
+    "dependencies": {
+        "@supabase/supabase-js": "^2.39.3",
+        "axios": "^1.6.7",
+        "cheerio": "^1.0.0-rc.12",
+        "date-fns": "^3.3.1",
+        "dotenv": "^16.4.1",
+        "next": "14.1.0",
+        "react": "^18.2.0",
+        "react-dom": "^18.2.0",
+        "recharts": "^2.11.0"
+    },
+    "devDependencies": {
+        "@types/node": "^20.11.16",
+        "@types/react": "^18.2.52",
+        "@types/react-dom": "^18.2.18",
+        "ts-node": "^10.9.2",
+        "typescript": "^5.3.3"
+    }
+}
