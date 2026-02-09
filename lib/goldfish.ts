@@ -114,7 +114,7 @@ export async function scrapeTournamentResults(tournamentUrl: string): Promise<st
             }
         });
 
-        const uniqueUrls = [...new Set(deckUrls)];
+        const uniqueUrls = deckUrls.filter((val, idx, self) => self.indexOf(val) === idx);
         console.log(`Found ${uniqueUrls.length} unique decklists.`);
         return uniqueUrls;
     } catch (error: any) {

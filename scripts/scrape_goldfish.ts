@@ -12,9 +12,6 @@ async function main() {
         const tournaments = await scrapeTournaments(formatName);
 
         for (const tournament of tournaments) {
-            // Check if tournament already exists
-            const { data: existingTournament } = await supabase
-                .from('tournaments')
             console.log(`Processing Tournament: ${tournament.name} (${tournament.date})`);
 
             // Create tournament in Supabase (UPSERT)
@@ -78,7 +75,7 @@ async function main() {
                 }));
 
                 // Ensure cards exist in the 'cards' table (simplified placeholder, enrichment script handles bulk)
-                const uniqueCardNames = [...new Set(deckData.cards.map(c => c.name))];
+                const uniqueCardNames = deckData.cards.map(c => c.name).filter((val, idx, self) => self.indexOf(val) === idx);
                 for (const name of uniqueCardNames) {
                     await supabase.from('cards').upsert({ name }, { onConflict: 'name' });
                 }
