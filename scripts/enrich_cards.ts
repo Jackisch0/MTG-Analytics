@@ -26,7 +26,8 @@ async function main() {
 
     const enrichedData = await fetchCardsBulk(cardNames);
 
-    for (const card of enrichedData) {
+    for (let i = 0; i < enrichedData.length; i++) {
+        const card = enrichedData[i];
         const { error: updateError } = await supabase
             .from('cards')
             .update({

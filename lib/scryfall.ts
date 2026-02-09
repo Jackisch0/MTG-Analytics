@@ -62,7 +62,9 @@ export async function fetchCardsBulk(cardNames: string[]): Promise<ScryfallCard[
                 identifiers: chunk.map(name => ({ name }))
             });
 
-            for (const data of response.data.data) {
+            const bulkItems = response.data.data;
+            for (let j = 0; j < bulkItems.length; j++) {
+                const data = bulkItems[j];
                 if (data && data.name) {
                     scryfallCards.push({
                         name: data.name,

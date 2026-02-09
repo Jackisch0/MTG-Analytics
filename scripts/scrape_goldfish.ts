@@ -7,11 +7,13 @@ async function main() {
 
     const formats = (process.env.FORMATS || 'standard').split(',');
 
-    for (const formatName of formats) {
+    for (let i = 0; i < formats.length; i++) {
+        const formatName = formats[i];
         console.log(`Processing format: ${formatName}`);
         const tournaments = await scrapeTournaments(formatName);
 
-        for (const tournament of tournaments) {
+        for (let j = 0; j < tournaments.length; j++) {
+            const tournament = tournaments[j];
             console.log(`Processing Tournament: ${tournament.name} (${tournament.date})`);
 
             // Create tournament in Supabase (UPSERT)
@@ -38,11 +40,11 @@ async function main() {
             console.log(`Tournament ${tData.name} (${tData.external_id}) processed. ID: ${tournamentId}`);
 
 
-            // Get deck URLs
             const deckUrls = await scrapeTournamentResults(tournament.url);
             console.log(`Found ${deckUrls.length} decklists in tournament.`);
 
-            for (const deckUrl of deckUrls) {
+            for (let k = 0; k < deckUrls.length; k++) {
+                const deckUrl = deckUrls[k];
                 const deckData = await scrapeDecklist(deckUrl);
                 if (!deckData) continue;
 
@@ -76,7 +78,8 @@ async function main() {
 
                 // Ensure cards exist in the 'cards' table (simplified placeholder, enrichment script handles bulk)
                 const uniqueCardNames = deckData.cards.map(c => c.name).filter((val, idx, self) => self.indexOf(val) === idx);
-                for (const name of uniqueCardNames) {
+                for (let m = 0; m < uniqueCardNames.length; m++) {
+                    const name = uniqueCardNames[m];
                     await supabase.from('cards').upsert({ name }, { onConflict: 'name' });
                 }
 
