@@ -24,3 +24,16 @@ SELECT
     END as spell_snare_value
 FROM daily_stats
 ORDER BY date DESC;
+
+-- View to find the most played 2-mana cards
+CREATE OR REPLACE VIEW top_2_mana_cards AS
+SELECT 
+    c.name,
+    SUM(dc.quantity) as total_quantity,
+    COUNT(DISTINCT dc.decklist_id) as deck_count
+FROM cards c
+JOIN decklist_cards dc ON dc.card_name = c.name
+WHERE c.cmc = 2 AND c.is_land = FALSE
+GROUP BY c.name
+ORDER BY total_quantity DESC
+LIMIT 10;

@@ -5,7 +5,7 @@ import { fetchCardsBulk } from '../lib/scryfall';
 async function main() {
     console.log('--- Starting MTG Goldfish Scrape ---');
 
-    const formats = (process.env.FORMATS || 'modern').split(',');
+    const formats = (process.env.FORMATS || 'standard').split(',');
 
     for (const formatName of formats) {
         console.log(`Processing format: ${formatName}`);

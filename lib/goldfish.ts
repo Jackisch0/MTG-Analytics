@@ -37,26 +37,36 @@ export async function scrapeTournaments(formatName: string): Promise<TournamentE
         const $ = cheerio.load(data);
         const tournaments: TournamentEntry[] = [];
 
-        $('.table-sm tbody tr').each((_, el) => {
+        // Updated selector to be more robust for different table structures
+        $('table tbody tr').each((_, el) => {
             const row = $(el);
-            const link = row.find('td:nth-child(2) a');
+            const link = row.find('a[href^="/tournament/"]');
+            if (link.length === 0) return;
+
             const tournamentUrl = link.attr('href');
             const name = link.text().trim();
-            const dateStr = row.find('td:nth-child(1)').text().trim();
+            // Dates on Goldfish are usually in the first or third column depending on the view
+            const dateStr = row.find('td').first().text().trim() || row.find('td:nth-child(3)').text().trim();
 
-            if (tournamentUrl && name && dateStr) {
-                // Parse date like "Feb 8, 2026"
-                const date = parse(dateStr, 'MMM d, yyyy', new Date());
+            // Filter for high-value events
+            const isHighValue = /Challenge|Showcase|Championship|Pro Tour|Qualifier|Regional/i.test(name);
 
-                tournaments.push({
-                    external_id: tournamentUrl.split('/').pop() || '',
-                    name,
-                    date: format(date, 'yyyy-MM-dd'),
-                    url: `${BASE_URL}${tournamentUrl}`
-                });
+            if (tournamentUrl && name && dateStr && isHighValue) {
+                try {
+                    const date = parse(dateStr, 'MMM d, yyyy', new Date());
+                    tournaments.push({
+                        external_id: tournamentUrl.split('/').pop() || '',
+                        name,
+                        date: format(date, 'yyyy-MM-dd'),
+                        url: `${BASE_URL}${tournamentUrl}`
+                    });
+                } catch (e) {
+                    console.warn(`Could not parse date "${dateStr}" for tournament: ${name}`);
+                }
             }
         });
 
+        console.log(`Found ${tournaments.length} high-value tournaments.`);
         return tournaments;
     } catch (error: any) {
         console.error(`Error scraping tournaments:`, error.message);
