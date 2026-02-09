@@ -10,6 +10,12 @@ export default function Dashboard() {
 
     useEffect(() => {
         async function fetchData() {
+            if (!supabase) {
+                console.error("Supabase client not initialized");
+                setLoading(false);
+                return;
+            }
+
             const { data: metrics, error } = await supabase
                 .from('spell_snare_metric')
                 .select('*')
