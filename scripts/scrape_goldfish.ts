@@ -15,47 +15,47 @@ async function main() {
             // Check if tournament already exists
             const { data: existingTournament } = await supabase
                 .from('tournaments')
-                .select('id')
-                .eq('external_id', tournament.external_id)
-                .single();
+            console.log(`Processing Tournament: ${tournament.name} (${tournament.date})`);
 
-            if (existingTournament) {
-                console.log(`Tournament ${tournament.name} (${tournament.external_id}) already exists. Skipping.`);
-                continue;
-            }
-
-            // Create tournament
-            const { data: newTournament, error: tError } = await supabase
+            // Create tournament in Supabase (UPSERT)
+            const { data: tData, error: tError } = await supabase
                 .from('tournaments')
-                .insert({
+                .upsert({
                     external_id: tournament.external_id,
                     name: tournament.name,
                     date: tournament.date,
-                    format: formatName,
-                    source: 'mtggoldfish'
+                    format: formatName.toLowerCase(),
+                    url: tournament.url,
+                    source: 'mtggoldfish' // Keep source as it was in the original
                 })
                 .select()
                 .single();
 
-            if (tError || !newTournament) {
-                console.error(`Failed to create tournament:`, tError?.message);
+            if (tError) {
+                console.error(`Error inserting tournament ${tournament.name}:`, tError.message);
                 continue;
             }
 
-            console.log(`Created tournament: ${newTournament.name}`);
+            // Use tData.id for new or existing tournament
+            const tournamentId = tData.id;
+            console.log(`Tournament ${tData.name} (${tData.external_id}) processed. ID: ${tournamentId}`);
+
 
             // Get deck URLs
             const deckUrls = await scrapeTournamentResults(tournament.url);
+            console.log(`Found ${deckUrls.length} decklists in tournament.`);
 
             for (const deckUrl of deckUrls) {
                 const deckData = await scrapeDecklist(deckUrl);
                 if (!deckData) continue;
 
+                console.log(`  - Scraped deck: ${deckData.deck_name} by ${deckData.player_name} (${deckData.cards.length} cards)`);
+
                 // Create decklist
                 const { data: newDeck, error: dError } = await supabase
                     .from('decklists')
                     .insert({
-                        tournament_id: newTournament.id,
+                        tournament_id: tournamentId, // Use the ID from the upserted tournament
                         player_name: deckData.player_name,
                         rank: deckData.rank,
                         deck_name: deckData.deck_name,

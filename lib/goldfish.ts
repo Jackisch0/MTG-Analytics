@@ -37,23 +37,41 @@ export async function scrapeTournaments(formatName: string): Promise<TournamentE
         const $ = cheerio.load(data);
         const tournaments: TournamentEntry[] = [];
 
-        // Updated selector to be more robust for different table structures
-        $('table tbody tr').each((_, el) => {
+        // Try multiple selectors as layout varies
+        const rows = $('table tr').length > 0 ? $('table tr') : $('.tournament-list-item');
+
+        rows.each((_, el) => {
             const row = $(el);
             const link = row.find('a[href^="/tournament/"]');
             if (link.length === 0) return;
 
             const tournamentUrl = link.attr('href');
             const name = link.text().trim();
-            // Dates on Goldfish are usually in the first or third column depending on the view
-            const dateStr = row.find('td').first().text().trim() || row.find('td:nth-child(3)').text().trim();
+
+            // Try to find date in columns or nearby text
+            let dateStr = row.find('td').first().text().trim() || row.find('td:nth-child(3)').text().trim();
+            if (!dateStr || dateStr === name) {
+                // Check if date is in the text following "on"
+                const text = row.text();
+                const dateMatch = text.match(/on\s+(\w+\s+\d+,\s+\d{4})/) || text.match(/on\s+(\d{4}-\d{2}-\d{2})/);
+                if (dateMatch) dateStr = dateMatch[1];
+            }
 
             // Filter for high-value events
-            const isHighValue = /Challenge|Showcase|Championship|Pro Tour|Qualifier|Regional/i.test(name);
+            const isHighValue = /Challenge|Showcase|Championship|Pro Tour|Qualifier|Regional|Destination/i.test(name);
 
             if (tournamentUrl && name && dateStr && isHighValue) {
                 try {
-                    const date = parse(dateStr, 'MMM d, yyyy', new Date());
+                    // Try different date formats
+                    let date: Date;
+                    if (dateStr.includes(',')) {
+                        date = parse(dateStr, 'MMM d, yyyy', new Date());
+                    } else {
+                        date = parse(dateStr, 'yyyy-MM-dd', new Date());
+                    }
+
+                    if (isNaN(date.getTime())) throw new Error("Invalid date");
+
                     tournaments.push({
                         external_id: tournamentUrl.split('/').pop() || '',
                         name,
@@ -61,7 +79,7 @@ export async function scrapeTournaments(formatName: string): Promise<TournamentE
                         url: `${BASE_URL}${tournamentUrl}`
                     });
                 } catch (e) {
-                    console.warn(`Could not parse date "${dateStr}" for tournament: ${name}`);
+                    // console.warn(`Could not parse date "${dateStr}" for tournament: ${name}`);
                 }
             }
         });
@@ -84,15 +102,21 @@ export async function scrapeTournamentResults(tournamentUrl: string): Promise<st
         const $ = cheerio.load(data);
         const deckUrls: string[] = [];
 
-        $('.table-condensed tbody tr').each((_, el) => {
-            const link = $(el).find('td:nth-child(2) a');
+        // Try to find the results table
+        const rows = $('table tr');
+        rows.each((_, el) => {
+            const row = $(el);
+            // Look for links that point to a deck
+            const link = row.find('a[href^="/deck/"]');
             const deckUrl = link.attr('href');
             if (deckUrl) {
                 deckUrls.push(`${BASE_URL}${deckUrl}`);
             }
         });
 
-        return deckUrls;
+        const uniqueUrls = [...new Set(deckUrls)];
+        console.log(`Found ${uniqueUrls.length} unique decklists.`);
+        return uniqueUrls;
     } catch (error: any) {
         console.error(`Error scraping tournament results:`, error.message);
         return [];
@@ -116,25 +140,39 @@ export async function scrapeDecklist(deckUrl: string): Promise<DecklistEntry | n
         const cards: Array<{ name: string; quantity: number; is_sideboard: boolean }> = [];
 
         // Parse mainboard and sideboard
-        // Fish uses a specific structure for the decklist area
-        $('#deck-view-tab-mainboard .deck-list-table tbody tr').each((_, el) => {
-            const row = $(el);
-            const qty = parseInt(row.find('.deck-col-qty').text().trim());
-            const name = row.find('.deck-col-card a').text().trim();
-            if (name && !isNaN(qty)) {
-                cards.push({ name, quantity: qty, is_sideboard: false });
-            }
-        });
+        // Fish standard structure
+        const parseRows = (selector: string, isSideboard: boolean) => {
+            $(selector).find('tr').each((_, el) => {
+                const row = $(el);
+                const qtyText = row.find('.deck-col-qty').text().trim();
+                const qty = parseInt(qtyText);
+                const name = row.find('.deck-col-card a').text().trim() || row.find('.deck-col-card').text().trim();
 
-        $('#deck-view-tab-sideboard .deck-list-table tbody tr').each((_, el) => {
-            const row = $(el);
-            const qty = parseInt(row.find('.deck-col-qty').text().trim());
-            const name = row.find('.deck-col-card a').text().trim();
-            if (name && !isNaN(qty)) {
-                cards.push({ name, quantity: qty, is_sideboard: true });
-            }
-        });
+                if (name && !isNaN(qty)) {
+                    cards.push({ name, quantity: qty, is_sideboard: isSideboard });
+                }
+            });
+        };
 
+        parseRows('#deck-view-tab-mainboard .deck-list-table', false);
+        parseRows('#deck-view-tab-sideboard .deck-list-table', true);
+
+        // Fallback for different layout (sometimes used in mobile or specific event pages)
+        if (cards.length === 0) {
+            $('.deck-list-table').each((tableIdx, tableEl) => {
+                const isSideboard = tableIdx > 0; // Rough heuristic: second table is sideboard
+                $(tableEl).find('tr').each((_, el) => {
+                    const row = $(el);
+                    const qty = parseInt(row.find('.deck-col-qty').text().trim());
+                    const name = row.find('.deck-col-card a').text().trim();
+                    if (name && !isNaN(qty)) {
+                        cards.push({ name, quantity: qty, is_sideboard: isSideboard });
+                    }
+                });
+            });
+        }
+
+        console.log(`Scraped ${cards.length} cards from deck.`);
         return {
             url: deckUrl,
             player_name: playerName,
