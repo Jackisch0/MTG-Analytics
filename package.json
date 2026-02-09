@@ -4,9 +4,9 @@
     "description": "MTG Tournament scraping and decklist analysis",
     "main": "index.js",
     "scripts": {
-        "scrape:goldfish": "ts-node scripts/scrape_goldfish.ts",
-        "scrape:melee": "ts-node scripts/scrape_melee.ts",
-        "enrich": "ts-node scripts/enrich_cards.ts",
+        "scrape:goldfish": "ts-node --transpile-only scripts/scrape_goldfish.ts",
+        "scrape:melee": "ts-node --transpile-only scripts/scrape_melee.ts",
+        "enrich": "ts-node --transpile-only scripts/enrich_cards.ts",
         "dev": "next dev",
         "build": "next build",
         "start": "next start"

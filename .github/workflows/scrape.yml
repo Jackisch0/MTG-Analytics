@@ -25,9 +25,11 @@ jobs:
           SUPABASE_URL: ${{ secrets.SUPABASE_URL }}
           SUPABASE_SERVICE_ROLE_KEY: ${{ secrets.SUPABASE_SERVICE_ROLE_KEY }}
           FORMATS: 'standard'
+          TS_NODE_TRANSPILE_ONLY: 'true'
           
       - name: Enrich Card Data
         run: npm run enrich
         env:
           SUPABASE_URL: ${{ secrets.SUPABASE_URL }}
           SUPABASE_SERVICE_ROLE_KEY: ${{ secrets.SUPABASE_SERVICE_ROLE_KEY }}
+          TS_NODE_TRANSPILE_ONLY: 'true'
